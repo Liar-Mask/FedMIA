@@ -16,3 +16,5 @@ lira_attack_ldh_auto.py
 0*
 _*
 exp_data/
+*.sh
+!run.sh
