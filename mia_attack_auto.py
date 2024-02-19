@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')
 
  #.cuda(device)
 # %%
-# 提取list里面的val loss 和 train loss
+
 def extract_loss(i):
     val_dict={}
     #for j,k in zip(i['val_index'],i['val_losses']):
@@ -53,16 +53,7 @@ def hinge_loss_fn(x,y):
 
 def ce_loss_fn(x,y):
     loss_fn=torch.nn.CrossEntropyLoss(reduction='none')
-
-    # return loss_fn(x,y).numpy()
     return loss_fn(x,y)
-    # x,y=copy.deepcopy(x),copy.deepcopy(y)
-    # mask=torch.eye(x.shape[1])[y].bool()
-    # tmp1=x[mask]
-    # x[mask]=-1e10
-    # tmp2=torch.max(x,dim=1)[0]
-    # # print(tmp1.shape,tmp2.shape)
-    # return (tmp1-tmp2).numpy()
 
 def extract_hinge_loss(i):
     val_dict={}
@@ -145,9 +136,6 @@ def extract_loss2logit(i):
     return (val_dict,train_dict)
 
 def merge_dicts(lst):
-    # keys=[]
-    # for k in lst:
-    #     keys.extend(list(k.keys()))
     new_dict={}
     for d in lst:
         for k in d.keys():
@@ -160,10 +148,8 @@ def merge_dicts(lst):
 
 def get_logit(l):
     return np.array(l)
-    # p=np.exp(-np.array(l))
-    # return np.log(p/(1-p+1e-6))
 
-def plot_auc(name,target_val_score,target_train_score,epoch): # 这里给的应该是越大越好的一个
+def plot_auc(name,target_val_score,target_train_score,epoch): 
     global fpr, tpr
     fpr, tpr, thresholds = metrics.roc_curve(torch.cat( [torch.zeros_like(target_val_score),torch.ones_like(target_train_score)] ).cpu().numpy(), torch.cat([target_val_score,target_train_score]).cpu().numpy())
     auc=metrics.auc(fpr, tpr)
@@ -173,17 +159,6 @@ def plot_auc(name,target_val_score,target_train_score,epoch): # 这里给的应�
     log_fpr=(log_fpr+5)/5.0
     log_tpr=(log_tpr+5)/5.0
     log_auc=metrics.auc( log_fpr,log_tpr )
-    # fig=plt.figure(figsize=(4,4))
-    # plt.plot( fpr,tpr,label=f"(AUC = {auc:0.4f})")
-    # plt.plot( log_fpr,log_tpr,label=f" (Log AUC = {log_auc:0.4f})")
-    # plt.plot( np.array([0,1]),np.array([0,1]),label=f"Ideal")
-    # plt.xlim([0,1.05])
-    # plt.ylim([0,1.05])
-    # plt.legend(loc=4)
-    # plt.xlabel("FPR")
-    # plt.ylabel("TPR")
-    # # plt.show()
-    # plt.savefig("./pdfs/{}{}.pdf".format( name,epoch))
 
     tprs={}
     for fpr_thres in [0.1,0.02,0.01,0.001,0.0001]:
@@ -238,7 +213,7 @@ def lira_attack_testidx(f,K,extract_fn=None):
     logit_val=[]
     #print("len(train_dict.keys()):",len(train_dict.keys()))
 
-    #剔除target model 的数据indexs
+    #Eliminate data indexes of target model
     lira_target=torch.load(f.format(K))
 
     target_val,target_train=extract_fn(lira_target)
@@ -267,9 +242,6 @@ def lira_attack_testidx(f,K,extract_fn=None):
     mu_in=logit_train.mean(axis=1)
     mu_out=logit_val.mean(axis=1)
 
-    # var_in=logit_train.var(axis=1) 
-    # var_out=logit_val.var(axis=1)
-
     var_in=logit_train.var() # global variance
     var_out=logit_val.var()
 
@@ -293,8 +265,6 @@ def lira_attack_testidx(f,K,extract_fn=None):
     #l_in,l_out=liratio(mu_in,mu_out,var_in,var_out,logits_new)
     l_out=liratio(mu_in,mu_out,var_in,var_out,logits_new)
 
-    # liratios=l_in/(l_out+1e-6)
-    #liratios=l_in/(l_out+1e-10)
     liratios=1-l_out
     val_liratios=np.array([liratios[i] for i in target_val.keys()])
     train_liratios=np.array([liratios[i] for i in target_train.keys()])
@@ -360,13 +330,11 @@ def lira_attack_ldh(f,epch,K,extract_fn=None):
 def lira_attack_ldh_cosine(f,epch,K,extract_fn=None,attack_mode="cos"):
     accs=[]
     training_res=[]
-    #print("OK0")
     for i in range(K):
         print(i,epch)
         # training_res.append(torch.load(f.format(i,epch),map_location=lambda storage, loc: storage))
         training_res.append(torch.load(f.format(i,epch)))
         accs.append(training_res[-1]["test_acc"])
-    #print("OK2")
     
     target_idx=0
     target_res=training_res[target_idx]
@@ -412,29 +380,11 @@ def lira_attack_ldh_cosine(f,epch,K,extract_fn=None,attack_mode="cos"):
     test_mu_out=shadow_test_losses.mean(axis=0)
     test_var_out=shadow_test_losses.var(axis=0)+1e-8
     # test_var_out=shadow_test_losses.var()+1e-8
-    # print(target_train_loss.shape,train_mu_out.shape,np.sqrt(train_var_out).shape)
-    # print(target_test_loss.shape,test_mu_out.shape,np.sqrt(test_var_out).shape)
 
     train_l_out=1-scipy.stats.norm.cdf(target_train_loss,train_mu_out,np.sqrt(train_var_out))
-    
     test_l_out=1-scipy.stats.norm.cdf(target_test_loss,test_mu_out,np.sqrt(test_var_out))
-    # assert 0
-
-    # test_l_out=liratio(None,test_mu_out,None,test_var_out,target_test_loss)
-    # 除去nan
-    # test_l_out=test_l_out[~(np.isnan(test_l_out))]
-    # train_l_out=train_l_out[~(np.isnan(train_l_out))]
-    # train_score=train_score[~(np.isnan(train_score))]
-    # test_score=test_score[~(np.isnan(test_score))]
-    # print(np.isnan(test_l_out).sum())
-    # print(np.isnan(train_l_out).sum())
 
     auc,log_auc,tprs=plot_auc("lira",torch.tensor(test_l_out),torch.tensor(train_l_out),epch)
-
-    # print("__"*10,"lira")
-    # print(f"tprs:{tprs}")
-    # print("test_acc:",accs[target_idx])
-    # print("__"*10,)
 
     return accs,tprs,auc,log_auc,(train_l_out,test_l_out)
 
@@ -443,12 +393,7 @@ def lira_attack(f,epch,K,extract_fn=None):
     training_res=[]
     for i in range(K):
         training_res.append(torch.load(f.format(i,epch)))
-        #print("f.format(i):",f.format(i))
-        #print(training_res[-1]["test_acc"])
-
         accs.append(training_res[-1]["test_acc"])
-
-        # print(f.format(i))
 
     losses_dict=[ extract_fn(i) for i in training_res]
     # losses_dict=[ extract_loss2logit(i) for i in training_res]
@@ -461,7 +406,6 @@ def lira_attack(f,epch,K,extract_fn=None):
     logit_val=[]
     #print("len(train_dict.keys()):",len(train_dict.keys()))
 
-    #剔除target model 的数据indexs
     target_idx=0
     lira_target=torch.load(f.format(target_idx,epch))
 
@@ -515,8 +459,6 @@ def lira_attack(f,epch,K,extract_fn=None):
     #l_in,l_out=liratio(mu_in,mu_out,var_in,var_out,logits_new)
     l_out=liratio(mu_in,mu_out,var_in,var_out,logits_new)
 
-    # liratios=l_in/(l_out+1e-6)
-    #liratios=l_in/(l_out+1e-10)
     liratios=1-l_out
     val_liratios=np.array([liratios[i] for i in target_val.keys()])
     train_liratios=np.array([liratios[i] for i in target_train.keys()])
@@ -601,17 +543,11 @@ def fig_out(x_axis_data, MAX_K,defence,seed,log_path, d,avg_d=None,other_scores=
     for k in d.keys():
         plt.plot(x_axis_data[0:len(d[k])], d[k], linewidth=1, label=k)#,color=colors[k])
     # plt.plot(x_axis_data, common_score,'bo-', linewidth=1, color='#2E8B57', label=r'Baseline')
-    
-    ## plot中参数的含义分别是横轴值，纵轴值，线的形状（'s'方块,'o'实心圆点，'*'五角星   ...，颜色，透明度,线的宽度和标签 ，
-
-    plt.legend(loc=3)  # 显示上面的label
+    plt.legend(loc=3)  
 
     plt.xlim(-2, 305)
     my_x_ticks = np.arange(0, 302, 50)
     plt.xticks(my_x_ticks,size=14)
-    # plt.ylim(0.0, 0.053)
-    # my_y_ticks = np.arange(0.0, 0.051, 0.01)
-    # plt.yticks(my_y_ticks,size=14)
     if avg_d:
         for k in avg_d.keys():
             if avg_d[k]:    
@@ -621,16 +557,13 @@ def fig_out(x_axis_data, MAX_K,defence,seed,log_path, d,avg_d=None,other_scores=
     plt.xlabel('Epoch',fontsize=14,fontdict={'size': 14})  # x_label
     plt.ylabel('TPR@FPR=0.01',fontsize=14,fontdict={'size': 14})  # y_label
     plt.grid(axis='both')
-    # plt.ylim(-1,1)#仅设置y轴坐标范围
+
     pdf_path=PATH.split("/")[0:-1]
     pdf_path="/".join(pdf_path)+"/attack.pdf"
     plt.savefig(pdf_path)
 
-    #log_path=PATH.split("/")[0:-1]
-    #print("PATH:",PATH)
     print("log_path0:",log_path)
     log_path=log_path+f"/def{defence}2_0.85_k{MAX_K}_{seed}_attack.log"
-    # log_path='/CIS32/zgx/Fed2/Code/FedMIA2/log_defense/instahide3_up0.65/'+log_path+f"/def{defence}_k{MAX_K}_{seed}_attack.log"
     print("log_path:",log_path)
     with open(log_path,"w") as f:
         json.dump({"avg_d":avg_d,"other_scores":other_scores,"accs":accs},f)
@@ -672,9 +605,6 @@ def attack_comparison(p,log_path,epochs,MAX_K,defence,seed):
         common_scores.append(common_score[1]['0.01'])
 
         reses_lira.append(lira_score[-1])
-        
-    
-    print("OK")
 
     reses=reses_lira
     train_score=np.vstack([ i[0].reshape(1,-1) for i in reses]).mean(axis=0)
@@ -744,22 +674,20 @@ def attack_comparison(p,log_path,epochs,MAX_K,defence,seed):
 
     fig_out(epochs,MAX_K, defence,seed,log_path,scores,avg_scores,other_scores,final_acc)
 
-
-
 def main(argv):
 
     global MODE, attack_modes, PATH,p_folder
     MODE='val' #"val"
     attack_modes=["cosine attack","grad diff","loss based"]
     epochs=list(range(10,int(argv[2])+1,10))
-    p_folder=argv[1]  #"/CIS32/zgx/Fed2/Code/FedMIA2/log_defense/instahide2_up0.85"
+    p_folder=argv[1]  
     PATH=argv[1]
     global device
     device=argv[3] 
 
     # log_path="logs/log_res"
     MAX_K=10
-    # attack_comparison(PATH,log_path,epochs, MAX_K,seed)
+
     for root, dirs, files in os.walk(p_folder, topdown=False):
         for name in dirs:
             #print("names:",name)
@@ -792,219 +720,3 @@ def main(argv):
 
 if __name__ == "__main__":
     main(sys.argv)
-# PATH=p_lira
-
- # choices = ["cosine attack", "grad diff"]
-
-
-# attack_comparison(PATH,epochs)
-
-# # %%
-# def fig_out_ldh(x_axis_data, MAX_K,seed,log_path, d,avg_d=None,other_scores=None,accs=None): 
-#     colors={
-#         "cosine attack":(55/256, 173/256, 107/256),
-#         "grad diff":(242/256, 159/256, 5/256),
-#         "loss based": (92/256, 147/256, 148/256),
-#         "lira":(26/256, 111/256, 223/256),
-#         "log_lira":(241/256, 64/256, 64/256),
-#             }
-#     k2name={
-#         "cosine attack":"Cosine",
-#         "grad diff":"GD",
-#         "loss based":"Loss",
-#         "lira":"Ours-S",
-#         "log_lira":"Ours-P",
-#             }
-#     fig = plt.figure(figsize=(6.5, 6.5), dpi=200)
-#     fig.subplots_adjust(top=0.91,
-#                         bottom=0.160,
-#                         left=0.180,
-#                         right=0.9,
-#                         hspace=0.2,
-#                         wspace=0.2)
-#     for k in d.keys():
-#         plt.plot(x_axis_data[0:len(d[k])], d[k], linewidth=1, label=k2name[k],linestyle='dashed')#,color=colors[k])
-#     # plt.plot(x_axis_data, common_score,'bo-', linewidth=1, color='#2E8B57', label=r'Baseline')
-    
-#     ## plot中参数的含义分别是横轴值，纵轴值，线的形状（'s'方块,'o'实心圆点，'*'五角星   ...，颜色，透明度,线的宽度和标签 ，
-
-#     plt.legend(loc=3)  # 显示上面的label
-
-#     plt.xlim(-2, 305)
-#     my_x_ticks = np.arange(0, 302, 50)
-#     plt.xticks(my_x_ticks,size=14)
-#     # plt.ylim(0.0, 0.053)
-#     # my_y_ticks = np.arange(0.0, 0.051, 0.01)
-#     # plt.yticks(my_y_ticks,size=14)
-#     if avg_d:
-#         for k in avg_d.keys():
-#             if avg_d[k]:   
-#                 print(len([i["0.01"] for i in avg_d[k]]), len(epochs[1:])) 
-#                 plt.plot(epochs[1:],[i["0.01"] for i in avg_d[k]] ,label=k2name[k],color=colors[k],linewidth=2)
-#                 # plt.hlines([avg_d[k]["0.01"]],xmin=0,xmax=300,label=k,color=colors[k])
-
-#     plt.legend(prop={'size': 10})
-#     plt.xlabel('Epoch',fontsize=14,fontdict={'size': 14})  # x_label
-#     plt.ylabel('TPR@FPR=0.01',fontsize=14,fontdict={'size': 14})  # y_label
-#     plt.grid(axis='both')
-#     # plt.ylim(-1,1)#仅设置y轴坐标范围
-#     pdf_path=PATH.split("/")[0:-1]
-#     pdf_path="/".join(pdf_path)+"/attack.pdf"
-#     plt.savefig(pdf_path,padding=0.1,bbox_inches='tight' )
-
-#     #log_path=PATH.split("/")[0:-1]
-#     #print("PATH:",PATH)
-#     print("log_path0:",log_path)
-#     log_path=log_path+f"/k{MAX_K}_{seed}_attack.log"
-#     print("log_path:",log_path)
-#     # with open(log_path,"w") as f:
-#     #     json.dump({"avg_d":avg_d,"other_scores":other_scores,"accs":accs},f)
-#     # assert 0
-
-# @ torch.no_grad()
-# def attack_comparison_ldh(p,log_path,epochs,MAX_K,seed):
-#     final_acc=lira_attack_ldh_cosine(p,epochs[-1],K=MAX_K,extract_fn=extract_hinge_loss)[0]
-#     reses_lira=[]
-#     reses_common={k:[] for k in attack_modes}
-#     lira_scores=[]
-#     common_scores=[]
-#     cos_scores=[]
-#     other_scores={}
-#     scores={k:[] for k in attack_modes}
-#     scores["lira"]=[]
-#     avg_scores={k:None for k in attack_modes}
-#     avg_scores["lira"]=None
-#     for epch in epochs:
-#         try:
-#             lira_score=lira_attack_ldh_cosine(p,epch,K=MAX_K,extract_fn=extract_hinge_loss)
-#         except ValueError:
-#             print("ValueError")
-#             continue
-#         scores["lira"].append(lira_score[1]['0.01'])
-#         # lira_score=lira_attack(p,epch,K=9,extract_fn=extract_hinge_loss)
-#         for attack_mode in attack_modes:
-#             common_score=cos_attack(p,0,epch,attack_mode,extract_fn=extract_hinge_loss)
-#             reses_common[attack_mode].append(common_score[-1])
-#             scores[attack_mode].append(common_score[1]['0.01'])
-#             if epch ==200 and attack_mode=="loss based":
-#                 other_scores["loss_single_epch_score"]=common_score[1]
-#                 other_scores["loss_single_auc"]=[common_score[2],common_score[3]]
-
-
-#         lira_scores.append(lira_score[1]['0.01'])
-#         common_scores.append(common_score[1]['0.01'])
-
-#         reses_lira.append(lira_score[-1])
-        
-    
-#     avg_scores["lira"]=[]
-#     other_scores["lira_auc"]=[]
-#     reses=reses_lira
-#     # print(len(reses))
-#     # print(reses)
-#     # assert 0
-#     for e in range(1,len(reses)):
-#         train_score=np.vstack([ i[0].reshape(1,-1) for i in reses[0:e]]).mean(axis=0)
-#         test_score=np.vstack([ i[1].reshape(1,-1) for i in reses[0:e]]).mean(axis=0)
-#         auc,log_auc,tprs=plot_auc("cosine attack",torch.tensor(test_score),torch.tensor(train_score),999)
-#         avg_scores["lira"].append(tprs)
-#         other_scores["lira_auc"].append([auc,log_auc])
-#         # print(f"tprs:{tprs}")
-#         # print("success!")
-
-#     avg_scores["log_lira"]=[]
-#     other_scores["log_lira_auc"]=[]
-#     reses=reses_lira
-#     for e in range(1,len(reses)):
-#         train_score=-np.nanmean(1-np.log(np.vstack([ i[0].reshape(1,-1) for i in reses[0:e]])),axis=0)
-#         test_score=-np.nanmean(1-np.log(np.vstack([ i[1].reshape(1,-1) for i in reses[0:e]])),axis=0)
-#         # print(train_score.min(),train_score.max())
-#         train_score=train_score[~(np.isnan(train_score))]
-#         test_score=test_score[~(np.isnan(test_score))]
-#         train_score[(np.isinf(train_score))]=-1e10
-#         test_score[(np.isinf(test_score))]=-1e10
-#         auc,log_auc,tprs=plot_auc("cosine attack",torch.tensor(test_score),torch.tensor(train_score),999)
-#         avg_scores["log_lira"].append(tprs)
-#         other_scores["log_lira_auc"].append([auc,log_auc])
-#         # print(f"tprs:{tprs}")
-#         # print("success!")
-
-#     # reses=reses_lira
-#     # train_score=-np.nanmean(1-np.log(np.vstack([ i[0].reshape(1,-1) for i in reses])),axis=0)
-#     # test_score=-np.nanmean(1-np.log(np.vstack([ i[1].reshape(1,-1) for i in reses])),axis=0)
-#     # print(train_score.min(),train_score.max())
-#     # train_score=train_score[~(np.isnan(train_score))]
-#     # test_score=test_score[~(np.isnan(test_score))]
-#     # train_score[(np.isinf(train_score))]=-1e10
-#     # test_score[(np.isinf(test_score))]=-1e10
-#     # print(train_score.min(),train_score.max())
-#     # print(train_score.shape)
-#     # # assert 0
-#     # auc,log_auc,tprs=plot_auc("averaged_log_lira",torch.tensor(test_score),torch.tensor(train_score),999)
-#     # print(f"tprs:{tprs}")
-#     # avg_scores["log_lira"]=tprs
-#     # other_scores["log_lira_auc"]=[auc,log_auc]
-#     # print("success!")
-
-#     avg_scores["cosine attack"]=[]
-#     other_scores["cos_attack_auc"]=[]
-#     reses=reses_common["cosine attack"]
-#     for e in range(1,len(reses)):
-#         train_score=-np.vstack([ i[0].reshape(1,-1) for i in reses[0:e]]).mean(axis=0)
-#         test_score=-np.vstack([ i[1].reshape(1,-1) for i in reses[0:e]]).mean(axis=0)
-#         auc,log_auc,tprs=plot_auc("cosine attack",torch.tensor(test_score),torch.tensor(train_score),999)
-#         avg_scores["cosine attack"].append(tprs)
-#         other_scores["cos_attack_auc"].append([auc,log_auc])
-#         # print(f"tprs:{tprs}")
-#         # print("success!")
-#     print(avg_scores["cosine attack"])
-
-#     avg_scores["grad diff"]=[]
-#     other_scores["grad_diff_auc"]=[]
-#     reses=reses_common["grad diff"]
-#     for e in range(1,len(reses)):
-#         train_score=-np.vstack([ i[0].reshape(1,-1) for i in reses[0:e]]).mean(axis=0)
-#         test_score=-np.vstack([ i[1].reshape(1,-1) for i in reses[0:e]]).mean(axis=0)
-#         auc,log_auc,tprs=plot_auc("cosine attack",torch.tensor(test_score),torch.tensor(train_score),999)
-#         avg_scores["grad diff"].append(tprs)
-#         other_scores["grad_diff_auc"].append([auc,log_auc])
-#         # print(f"tprs:{tprs}")
-#         # print("success!")
-#     # print(avg_scores["cosine attack"])
-
-#     avg_scores["loss based"]=[]
-#     other_scores["loss_based_auc"]=[]
-#     reses=reses_common["loss based"]
-#     for e in range(1,len(reses)):
-#         train_score=-np.vstack([ i[0].reshape(1,-1) for i in reses[0:e]]).mean(axis=0)
-#         test_score=-np.vstack([ i[1].reshape(1,-1) for i in reses[0:e]]).mean(axis=0)
-#         auc,log_auc,tprs=plot_auc("cosine attack",torch.tensor(test_score),torch.tensor(train_score),999)
-#         avg_scores["loss based"].append(tprs)
-#         other_scores["loss_based_auc"].append([auc,log_auc])
-#         # print(f"tprs:{tprs}")
-#         # print("success!")
-#     # print(avg_scores["cosine attack"])
-#     print(avg_scores.keys())
-
-#     fig_out_ldh(epochs,MAX_K, seed,log_path,scores,avg_scores,other_scores,final_acc)
-
-# attack_modes=["lira","cosine attack","grad diff","loss based"]
-# seed="0"
-# MAX_K=10
-# MODE="val"
-# PATH="/home/dlibf/play_ground/FLMIA_res_0917/cifar100_K10_N5000_alexnet_iid_$sgd_local1_defnone0.0_s1"
-# PATH+="/client_{}_losses_epoch{}.pkl"
-# log_path="/home/dlibf/play_ground/FLMIA_res_0918/log_alex"
-# epochs=list(range(10,301,10))
-# attack_comparison_ldh(PATH,log_path,epochs, MAX_K,seed)
-# # %%
-# attack_modes=["cosine attack","grad diff","loss based"]
-# seed="0"
-# MAX_K=10
-# MODE="val"
-# PATH="/home/dlibf/play_ground/FLMIA_res_0917/cifar100_K10_N5000_ResNet18_iid_$sgd_local1_defnone0.0_s1"
-# PATH+="/client_{}_losses_epoch{}.pkl"
-# log_path="/home/dlibf/play_ground/FLMIA_res_0918/log_alex"
-# epochs=list(range(10,301,10))
-# attack_comparison_ldh(PATH,log_path,epochs, MAX_K,seed)
-# # %%
