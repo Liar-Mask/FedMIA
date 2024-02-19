@@ -11,7 +11,7 @@ def parser_args():
     parser.add_argument('--log_folder_name', type=str, default='/training_log_correct_iid/',
                         help='saving path')
     parser.add_argument('--samples_per_user', type=int, default=5000,
-                        help="number of users: K")
+                        help="the number of samples in per user")
     parser.add_argument('--defense', type=str, default="none",
                         help="defense method:[mix_up, instahide]")
     parser.add_argument('--klam', type=int, default=3,
@@ -22,9 +22,9 @@ def parser_args():
                         help="the param of beta distribution in mix up")
     
     parser.add_argument('--d_scale', type=float, default=0.0,
-                        help="number of users: K")
+                        help="d_scale")
     parser.add_argument('--seed', type=int, default=42,
-                        help="number of users: K")
+                        help="random seed")
     parser.add_argument('--frac', type=float, default=1,
                         help="the fraction of clients: C")
     parser.add_argument('--local_ep', type=int, default=1,
@@ -69,7 +69,7 @@ def parser_args():
     
     parser.add_argument('--dataset', type=str, default='cifar10', help="name of dataset")
     
-    parser.add_argument('--data_root', default='/CIS32/zgx/Fed2/Data',
+    parser.add_argument('--data_root', default='../Data',
                         help='dataset directory')
 
     # =========================== Other parameters ===================================
@@ -91,11 +91,6 @@ def parser_args():
     default=1e4,
     help="Clip per-sample gradients to this norm",
     )
-
-  
-    # =========================== IPR parameters ===================================
-    
-    # signature argument
 
 
     parser.add_argument('--weight_type', default='gamma', choices=['gamma', 'kernel'],
@@ -132,14 +127,9 @@ def parser_args():
 
     parser.add_argument('--sigma',  type=float, default= 0.1 , help='the sgd of Gaussian noise')
 
-
-
     # =========================== Robustness ===================================
     parser.add_argument('--pruning', action='store_true', default=False)
     parser.add_argument('--percent', default=5, type=float)
-
-    # parser.add_argument('--im_balance', action='store_true', default=False,
-    #                     help='whether im_balance')
     
     args = parser.parse_args()
 

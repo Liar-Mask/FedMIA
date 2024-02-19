@@ -36,7 +36,7 @@ class CIFAR10(VisionDataset):
     }
 
     def __init__(self, root, indices, transform=None, target_transform=None, download=False,need_index=False):
-        # 增加了Index
+
         super(CIFAR10, self).__init__(root,
                                       transform=transform,
                                       target_transform=target_transform)
@@ -67,9 +67,9 @@ class CIFAR10(VisionDataset):
         
         self.data = np.vstack(self.data).reshape(-1, 3, 32, 32)
         self.data = self.data.transpose((0, 2, 3, 1))  # convert to HWC
-        self.data = self.data[self.indices]  #按照index选择data
-        self.targets = np.array(self.targets)[self.indices] #按照index选择taeget
-        self.true_index = np.array([i for i in range(60000)])[self.indices] # self.data在原数据集中的序号 数据本身的index也需要  
+        self.data = self.data[self.indices]  
+        self.targets = np.array(self.targets)[self.indices] 
+        self.true_index = np.array([i for i in range(60000)])[self.indices] # The serial number of self.data in the original data set and the index of the data itself are also required.
 
     def __getitem__(self, index):
         """

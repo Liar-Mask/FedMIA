@@ -17,11 +17,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import models as models
 
-# from opacus.validators import ModuleValidator
 from opacus import PrivacyEngine
 from experiments.base import Experiment
 from experiments.trainer_private import TrainerPrivate, TesterPrivate
-from dataset import CIFAR10, CIFAR100
+
 
 class IPRFederatedLearning(Experiment):
     """
@@ -58,28 +57,18 @@ class IPRFederatedLearning(Experiment):
                                                         )
         
         if self.args.dataset == 'cifar10':
-            # self.dataset = CIFAR10
             self.num_classes = 10
-            # self.dataset_size = 60000
         elif self.args.dataset == 'cifar100':
-            # self.dataset = CIFAR100
             self.num_classes = 100
-            # self.dataset_size = 60000
         elif self.args.dataset == 'dermnet':
-            # self.dataset = CIFAR100
             self.num_classes = 23
-            # self.dataset_size = 19500
-        elif self.args.dataset == 'oct':
-            # self.dataset = CIFAR100
-            self.num_classes = 4
-            # self.dataset_size = 19500
      
         self.MIA_trainset_dir=[]
         self.MIA_valset_dir=[]
         self.MIA_trainset_dir_cos=[]
         self.MIA_valset_dir_cos=[]
         self.train_idxs_cos=[]
-        self.testset_idx=(50000+np.arange(10000)).astype(int) # 最后10000样本的作为test set
+        self.testset_idx=(50000+np.arange(10000)).astype(int) # The last 10,000 samples are used as the test set
         self.testset_idx_cos=(50000+np.arange(1000)).astype(int)
 
         print('==> Preparing model...')
@@ -101,20 +90,17 @@ class IPRFederatedLearning(Experiment):
         self.trainer = TrainerPrivate(self.model, self.train_set, self.device, self.dp, self.sigma,self.num_classes, self.defense,args.klam,args.up_bound,args.mix_alpha)
         self.tester = TesterPrivate(self.model, self.device)
 
-        self.makedirs_or_load()
-    
+        self.makedirs_or_load() 
               
     def construct_model(self):
 
         model = models.__dict__[self.args.model_name](num_classes=self.num_classes)
-        # if not ModuleValidator.is_valid(model):
-        #     model = ModuleValidator.fix(model)
+
         #model = torch.nn.DataParallel(model)
         self.model = model.to(self.device)
         
         torch.backends.cudnn.benchmark = True
         print('Total params: %.2f' % (sum(p.numel() for p in model.parameters())))
-
 
     def train(self):
         # these dataloader would only be used in calculating accuracy and loss
@@ -123,7 +109,6 @@ class IPRFederatedLearning(Experiment):
         test_ldr = DataLoader(self.test_set, batch_size=self.batch_size , shuffle=False, num_workers=2)
 
         local_train_ldrs = []
-        # 不区分iid 和 non iid (还是要区分的，两者的dict_users不同)
         if args.iid:
             for i in range(self.num_users):
                 if args.defense=='instahide':
@@ -134,7 +119,7 @@ class IPRFederatedLearning(Experiment):
                 # print("len:",len(local_train_ldr)) 1
                 local_train_ldrs.append(local_train_ldr)
 
-        else:  #copy原版的
+        else: 
             for i in range(self.num_users):
                 local_train_ldr = DataLoader(self.dict_users[i], batch_size = self.batch_size,
                                                 shuffle=True, num_workers=2)
@@ -144,7 +129,7 @@ class IPRFederatedLearning(Experiment):
         total_time=0
         file_name = "_".join(
                 [ 'a',args.model_name, args.dataset,str(args.num_users),str(args.optim), str(args.lr_up), str(args.batch_size),  str(time.strftime("%Y_%m_%d_%H%M%S", time.localtime()))])
-        # b=os.getcwd() + "/"+self.args.log_folder_name
+
         b=os.path.join(os.getcwd(), self.save_dir)
         if not os.path.exists(b):
             os.makedirs(b)
@@ -167,10 +152,9 @@ class IPRFederatedLearning(Experiment):
 
             start = time.time()
             for idx in tqdm(idxs_users, desc='Epoch:%d, lr:%f' % (self.epochs, self.lr)):
-                #self.model.load_state_dict(self.w_t)
-                #self.model
+
                 self.model.load_state_dict(global_state_dict)
-                # print("len:",len(local_train_ldrs[idx]))
+
                 local_w, local_loss= self.trainer._local_update_noback(local_train_ldrs[idx], self.local_ep, self.lr, self.optim)
                 test_loss, test_acc=self.trainer.test(val_ldr)  
 
@@ -178,7 +162,7 @@ class IPRFederatedLearning(Experiment):
                 local_losses.append(local_loss)
                 
                 if args.MIA_mode==1 and((epoch+1)%10==0 or epoch==0 or epoch in args.schedule_milestone or epoch-1 in args.schedule_milestone or epoch-2 in args.schedule_milestone)==1:
-                    # 需要保存的数据：所有client对于client0和test set的结果；client0将client0数据存为train，其他client存为val
+                    # Data that needs to be saved: the results of all clients for client0 and test set; client0 saves client0 data as train, and other clients as val
                     save_dict={}
                     save_dict['test_acc']=test_acc
                     save_dict['test_loss']=test_loss
@@ -198,20 +182,10 @@ class IPRFederatedLearning(Experiment):
                     val_res = get_all_losses_from_indexes(self.train_set,self.train_idxs[self.watch_val_client_id], self.model)
                     save_dict['val_index']=self.train_idxs[self.watch_val_client_id]
                     save_dict['val_res']=val_res
-                    # if idx==self.watch_train_client_id: # 如果是watched_clients训练完之后的model
-                    #     if self.args.lira_attack == True: 
-                    #         train_res = get_all_losses_from_indexes(self.train_set,self.train_idxs[idx], self.model)
-                    #         save_dict['train_index']=self.train_idxs[idx]
-                    #         save_dict['train_res']=train_res
-                            
-                    # else:
-                    #         val_res = get_all_losses_from_indexes(self.train_set,self.train_idxs[self.watch_train_client_id], self.model)
-                    #         save_dict['val_index']=self.train_idxs[self.watch_train_client_id]
-                    #         save_dict['val_res']=val_res
 
                     if self.cosine_attack ==True:# and idx == self.watch_train_client_id:
 
-                        ## 计算model grads
+                        ## compute model grads
                         model_grads= []
                         for name, local_param in self.model.named_parameters():
                             if local_param.requires_grad == True:
@@ -219,10 +193,10 @@ class IPRFederatedLearning(Experiment):
                                 model_grads.append(para_diff.detach().cpu().flatten())
                         model_grads=torch.cat(model_grads,-1)
 
-                        ## 计算cosine score 和 grad diff score
+                        ## compute cosine score 和 grad diff score
                         cos_model = models.__dict__[self.args.model_name](num_classes=self.num_classes)
                         cos_model = cos_model.to(torch.device("cuda")) 
-                        cos_model.load_state_dict(global_state_dict) # 加载基础的全局模型
+                        cos_model.load_state_dict(global_state_dict) # Load the basic global model
                         train_cos,train_diffs, train_norm,val_cos, val_diffs,val_norm,test_cos, test_diffs,test_norm=get_all_cos(cos_model, val_ldr,test_ldr, self.test_set, self.train_set,
                                                                  self.train_idxs[self.watch_train_client_id],
                                                                  self.train_idxs[self.watch_val_client_id], 
@@ -241,7 +215,6 @@ class IPRFederatedLearning(Experiment):
                         os.makedirs(os.path.join(os.getcwd(), self.save_dir))
                         print('MIA Score saved in:', os.path.join(os.getcwd(), self.save_dir))
                     torch.save(save_dict, os.path.join(os.getcwd(), self.save_dir, f'client_{idx}_losses_epoch{epoch+1}.pkl'))
-
 
             if self.optim=="sgd":
                 if self.args.lr_up=='common':
@@ -298,9 +271,6 @@ class IPRFederatedLearning(Experiment):
                     )
                 s = 'epoch:{}, lr:{:.5f}, val_acc:{:.4f}, val_loss:{:.4f}, tarin_acc:{:.4f}, train_loss:{:.4f},time:{:.4f}, total_time:{:.4f}'.format(epoch,self.lr,acc_val_mean,loss_val_mean,acc_train_mean,loss_train_mean,interval_time,total_time)
                 
-                # with open(fn, 'a', encoding = 'utf-8') as f:   
-                #     f.write(s)
-                #     f.write('\n')
                 with open(fn,"a") as f:
                     json.dump({"epoch":epoch,"lr":round(self.lr,5),"train_acc":round(acc_train_mean,4  ),"test_acc":round(acc_val_mean,4),"time":round(total_time,2)},f)
                     f.write('\n')
@@ -338,7 +308,7 @@ def get_all_losses(dataloader, model, criterion, device,req_logits=False):
     losses = []
     logits = []
     labels = []
-    # print(iter(dataloader).next())
+
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(dataloader):
             inputs, targets = inputs.to(device), targets.to(device)
@@ -363,7 +333,6 @@ def get_all_losses_from_indexes(dataset,indexes, model):
     losses = []
     logits = []
     labels = []
-    # print(iter(dataloader).next())
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(dataloader):
             inputs, targets = inputs.to(device), targets.to(device)
@@ -393,9 +362,7 @@ def get_all_cos(cos_model, initial_loader, test_dataloader, test_set, train_set,
                             lr,
                             weight_decay=0.0005)
     cos_models=[]
-    # assert 0
     privacy_engine = PrivacyEngine()
-    # assert 0
     cos_model, optimizer, samples_loader = privacy_engine.make_private(
         module=cos_model,
         optimizer=optimizer,
@@ -403,19 +370,14 @@ def get_all_cos(cos_model, initial_loader, test_dataloader, test_set, train_set,
         noise_multiplier=0,
         max_grad_norm=1e10,
     )
-    # for i in range(3):
-    #     cos_models.append(copy.deepcopy(cos_model))        
+ 
     tarin_dataloader=DataLoader(DatasetSplit(train_set, train_idxs), batch_size = 10 ,shuffle=False, num_workers=0)
     val_dataloader=DataLoader(DatasetSplit(train_set, val_idxs), batch_size = 10 ,shuffle=False, num_workers=0)
     test_dataloader=DataLoader(test_set, batch_size=10 , shuffle=False, num_workers=0)
     
     train_cos, train_diffs,train_norm=get_cos_score(tarin_dataloader,optimizer,cos_model,device,model_grads)
-    #print("tarin_cos succeed!")
     val_cos,val_diffs,val_norm=get_cos_score(val_dataloader,optimizer,cos_model,device,model_grads)
-    #print("val_cos succeed!")
     test_cos, test_diffs,test_norm=get_cos_score(test_dataloader,optimizer,cos_model,device,model_grads)
-    # print("test_cos succeed!")
-    
 
     return train_cos, train_diffs, train_norm,val_cos,val_diffs,val_norm,test_cos, test_diffs,test_norm
 
@@ -430,7 +392,7 @@ def get_cos_score(samples_ldr,optimizer,cos_model,device,model_grads ):
     model_diff_norm=torch.norm(model_grads, p=2, dim=0)**2
     for batch_idx, (x, y) in enumerate(samples_ldr):
         sample_batch_grads=[]
-        #print("batch_idx:{}\n x:{} \n y:{}\n".format(batch_idx,x,y))
+
         x, y = x.to(device), y.to(device)
         optimizer.zero_grad()
 
@@ -438,18 +400,16 @@ def get_cos_score(samples_ldr,optimizer,cos_model,device,model_grads ):
 
         pred = cos_model(x)
         loss += F.cross_entropy(pred, y)
-        # acc_meter += accuracy(pred, y)[0].item()
         loss.backward()
 
         sample_batch_grads=[]
-        for name, param in cos_model.named_parameters(): #保存该batch的samples对Model所有参数的grads
+        for name, param in cos_model.named_parameters(): #Save the grads of all parameters of the Model for the samples of the batch.
             if param.requires_grad==True:
-                #sample_batch_grads.append(param.grad_sample.cpu().flatten(start_dim=1))  #第i维度为第i个sample对该参数的grad
+                #The i-th dimension is the grad of the parameter of the i-th sample
                 sample_batch_grads.append(param.grad_sample.flatten(start_dim=1))
 
-        sample_batch_grads=torch.cat(sample_batch_grads,1) # 对于每个sample，把它对所有参数的grads连接到一行
+        sample_batch_grads=torch.cat(sample_batch_grads,1) # For each sample, concatenate its grads for all parameters into one line
 
-        
         for sample_grad in sample_batch_grads:
             cos_score = F.cosine_similarity(sample_grad, model_grads, dim=0)
             cos_scores.append(cos_score)
@@ -459,26 +419,7 @@ def get_cos_score(samples_ldr,optimizer,cos_model,device,model_grads ):
 
             sample_grads.append(torch.norm(sample_grad, p=2, dim=0)**2)
 
-    #     sample_grads.append(sample_batch_grads) #保存该batch的grads tensor，后续需要按行cat即得到所有样本的grads集合
-        
-    #     #optimizer.step() 
-
-    # # 计算sample cosine
-    # sample_grads=torch.cat(sample_grads,0) #得到len(train_set)行所有训练样本的grads Tensor，第i行为第i个样本的对所有参数的grads
-    # #print("set_grads_shape:",sample_grads.shape) 
-    
-    # for sample_grad in sample_grads:
-    #     # 计算cos相似度
-    #     cos_score = F.cosine_similarity(sample_grad, model_grads, dim=0)
-    #     cos_scores.append(cos_score)
-
-    #     # 计算grad_diff score
-    #     grad_diff=torch.norm(model_grads, p=2, dim=0) - torch.norm(model_grads-sample_grad, p=2, dim=0)
-    #     grad_diffs.append(grad_diff)
-
     return  torch.tensor(cos_scores).cpu(), torch.tensor(grad_diffs).cpu(), torch.tensor(sample_grads).cpu()
-
-
 
 def main(args):
     logs = {'net_info': None,
@@ -504,18 +445,12 @@ def main(args):
 
     logg, time, best_test_acc, test_acc = fl.train()                                         
                                              
-    logs['net_info'] = logg  #logg=self.logs,    self.logs['best_model'] = copy.deepcopy(self.model.state_dict())
+    logs['net_info'] = logg 
     logs['test_acc'] = test_acc
     logs['bp_local'] = True if args.bp_interval == 0 else False
-    #print(logg['keys'])
-    
 
     if not os.path.exists(save_dir + args.model_name +'/' + args.dataset):
         os.makedirs(save_dir + args.model_name +'/' + args.dataset)
-    # torch.save(logs,
-    #            save_dir + args.model_name +'/' + args.dataset + '/Dp_{}_{}_iid_{}_num_sign_{}_w_type_{}_loss_{}_B_{}_alpha_{}_num_back_{}_type_{}_T_{}_epoch_{}_E_{}_u_{}_{:.1f}_{:.4f}_{:.4f}.pkl'.format(
-    #                args.dp, args.sigma, args.iid, args.num_sign, args.weight_type, args.loss_type, args.num_bit, args.loss_alpha, args.num_back, args.backdoor_indis, args.num_trigger, args.epochs, args.local_ep, args.num_users, args.frac, time, test_acc
-    #            ))
     torch.save(logs,
                save_dir + args.model_name +'/' + args.dataset + '/epoch_{}_E_{}_u_{}_{:.4f}_{:.4f}.pkl'.format(
                     args.epochs, args.local_ep, args.num_users, time, test_acc
@@ -527,14 +462,11 @@ def setup_seed(seed):
      torch.cuda.manual_seed_all(seed)
      np.random.seed(seed)
      random.seed(seed)
-    #  torch.backends.cudnn.deterministic = True
 
 if __name__ == '__main__':
     args = parser_args()
     print(args)
     setup_seed(args.seed)
-    #os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
-    #os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
     args.save_dir=args.save_dir+'/'+f"{args.dataset}_K{args.num_users}_N{args.samples_per_user}_{args.model_name}_def{args.defense}_iid_${args.optim}_local{args.local_ep}_s{args.seed}"
     print("scores saved in:",os.path.join(os.getcwd(), args.save_dir))
