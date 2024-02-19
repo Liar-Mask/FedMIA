@@ -63,8 +63,7 @@ These defenses are controlled by the parameter `defense`, `dp` and other paramet
 
 3. Milad Nasr, Reza Shokri, and Amir Houmansadr. Comprehensive privacy analysis of deep learning: Passive and active white-box inference attacks against centralized and federated learning. In 2019 IEEE symposium on security and privacy (SP), 2019.
 
-4. Yuhao Gu, Yuebin Bai, and Shubin Xu. Cs-mia: Membership
-510 inference attack based on prediction confidence series in federated learning. Journal of Information Security and
+4. Yuhao Gu, Yuebin Bai, and Shubin Xu. Cs-mia: Membership inference attack based on prediction confidence series in federated learning. Journal of Information Security and
 Applications, 2022.
 
 5. Robin C Geyer, Tassilo Klein, and Moin Nabi. Differentially private federated learning: A client level perspective. arXiv preprint arXiv:1712.07557, 2017.
