@@ -16,7 +16,7 @@ Membership Inference Attacks (MIAs) poses a growing threat to privacy preservati
 
 Before executing the project code, please prepare the Python environment according to the `requirement.txt` file. We set up the environment with `python 3.8` and `torch 1.8.1`. 
 
-In the experiment, we utilized two image classification datasets: [Cifar100](https://www.cs.toronto.edu/~kriz/cifar.html) and [Dermnet](www.dermnet.com). CIFAR-100 contains 50,000 images and 100 categories. Dermnet includes 23,000 dermoscopic images with 23 categories.
+In the experiment, we utilized two image classification datasets: [CIFAR-100](https://www.cs.toronto.edu/~kriz/cifar.html) and [Dermnet](www.dermnet.com). CIFAR-100 contains 50,000 images and 100 categories. Dermnet includes 23,000 dermoscopic images with 23 categories.
 
 ### How to run
 
