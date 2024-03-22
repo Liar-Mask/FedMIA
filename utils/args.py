@@ -69,7 +69,7 @@ def parser_args():
     
     parser.add_argument('--dataset', type=str, default='cifar10', help="name of dataset")
     
-    parser.add_argument('--data_root', default='../Data',
+    parser.add_argument('--data_root', default='Data',
                         help='dataset directory')
 
     # =========================== Other parameters ===================================
