@@ -38,10 +38,10 @@ The summary of these methods including the use of temporal and spatial informati
 | ------------- | -------------- | -------------------- | ------------------- |
 | Blackbox-Loss [1]    | Data Loss      | Single               | Single              |
 | Grad-Cosine [2]     | Cos Similarity | Single               | Single              |
+| Grad-Diff [2] | Cos similarity | Single                | Single              |
 | Grad-Norm [3] | Gradient Norm  | Single               | Single              |
 | Loss-Series [4]    | Data Loss      | Multi                | Single              |
-| Avg-Cosine  [2]   | Cos Similarity | Single               | Single              |
-| Grad-Diff [2] | Cos similarity | Multi                | Single              |
+| Avg-Cosine  [2]   | Cos Similarity | Multi               | Single              |
 | FedMIA-I Ours | Data Loss | Multi                | Multi               |
 | FedMIA-II Ours  | Cos similarity | Multi                | Multi               |
 
