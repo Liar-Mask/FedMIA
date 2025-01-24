@@ -1,7 +1,7 @@
 numpy==1.24.4
 opacus==1.1.2
 scipy==1.10.1
-torch==1.8.1+cu111
+torch @ https://download.pytorch.org/whl/cu111/torch-1.8.1%2Bcu111-cp38-cp38-linux_x86_64.whl
 torchaudio==0.8.1
-torchvision==0.9.1+cu111
+torchvision @ https://download.pytorch.org/whl/cu111/torchvision-0.9.1%2Bcu111-cp38-cp38-linux_x86_64.whl
 tqdm==4.66.1
